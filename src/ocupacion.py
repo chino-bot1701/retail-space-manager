@@ -28,6 +28,68 @@ LIBRE, PARCIAL, OCUPADO = "libre", "parcial", "ocupado"
 COLORES = {LIBRE: "#ffffff", PARCIAL: "#f0a202", OCUPADO: "#d7373f"}
 
 
+# --------------------------------------------------------------------------
+# Familias comerciales
+# --------------------------------------------------------------------------
+# Once giros son demasiados para una gráfica: con una paleta categórica por
+# defecto el resultado es un arcoíris en el que ningún color significa nada.
+# Se agrupan en cinco familias —que es como el área comercial habla del
+# tenant mix de todos modos— y se les da una paleta ordenada de cálido a frío,
+# pensada para leerse sobre fondo oscuro.
+FAMILIA = {
+    "Ancla": "Anclas y entretenimiento",
+    "Entretenimiento": "Anclas y entretenimiento",
+    "Gimnasio": "Anclas y entretenimiento",
+    "Restaurante": "Alimentos y bebidas",
+    "Comida rápida": "Alimentos y bebidas",
+    "Café y postres": "Alimentos y bebidas",
+    "Moda": "Moda",
+    "Salud y belleza": "Salud y servicios",
+    "Servicios": "Salud y servicios",
+    "Servicios financieros": "Financieros y telecom",
+    "Telecomunicaciones": "Financieros y telecom",
+}
+
+# El orden es fijo para que una familia conserve su color entre plazas y entre
+# recargas. Una leyenda que se reordena sola no se puede comparar.
+ORDEN_FAMILIAS = [
+    "Anclas y entretenimiento",
+    "Alimentos y bebidas",
+    "Moda",
+    "Salud y servicios",
+    "Financieros y telecom",
+]
+
+PALETA_FAMILIAS = ["#3d84a8", "#e07a5f", "#f2cc8f", "#81b29a", "#9a8c98"]
+
+OTRA = "Otro"
+
+# Un color por plaza, fijo. Con la paleta por defecto, dos de las tres salían
+# en tonos de azul casi iguales y la serie histórica no se podía leer.
+COLOR_PLAZA = {"PALT": "#3d84a8", "PBER": "#e07a5f", "PSIS": "#81b29a"}
+
+
+def familia(giro: str | None) -> str:
+    """La familia de un giro. Una marca escrita a mano en la demo no tiene
+    giro conocido y cae en 'Otro'."""
+    return FAMILIA.get(giro or "", OTRA)
+
+
+def escala_familias(presentes: Iterable[str] | None = None
+                    ) -> tuple[list[str], list[str]]:
+    """Dominio y rango de color, para que las gráficas los compartan.
+
+    Con `presentes` se recortan las familias que no aparecen: una leyenda con
+    entradas que no están en la gráfica hace buscar algo que no existe. El
+    orden y el color de las que sí aparecen no cambian.
+    """
+    pares = list(zip(ORDEN_FAMILIAS + [OTRA], PALETA_FAMILIAS + ["#5c5c66"]))
+    if presentes is not None:
+        hay = set(presentes)
+        pares = [(f, c) for f, c in pares if f in hay]
+    return [f for f, _ in pares], [c for _, c in pares]
+
+
 def estado(cat: pd.DataFrame, libro: Libro,
            fecha: date | None = None) -> pd.DataFrame:
     """Una fila por local, con lo que tiene encima en esa fecha.

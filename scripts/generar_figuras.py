@@ -23,7 +23,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import ocupacion  # noqa: E402
 from src.generar_historia import generar  # noqa: E402
-from src.ocupacion import COLORES  # noqa: E402
+from src.ocupacion import COLOR_PLAZA, COLORES  # noqa: E402
 from src.plaza import (NIVELES_NOMBRE, niveles_ordenados,  # noqa: E402
                        nombre_plaza)
 
@@ -94,8 +94,8 @@ def historia(cat, libro) -> None:
         gridspec_kw={"height_ratios": [2, 1]})
 
     for plaza, g in serie.groupby("plaza"):
-        arriba.plot(g["fecha"], g["ocupacion"], linewidth=2,
-                    label=nombre_plaza(plaza))
+        arriba.plot(g["fecha"], g["ocupacion"], linewidth=2.2,
+                    color=COLOR_PLAZA[plaza], label=nombre_plaza(plaza))
     arriba.set_ylim(0, 1)
     arriba.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     arriba.set_yticklabels(["0%", "25%", "50%", "75%", "100%"])
@@ -104,12 +104,15 @@ def historia(cat, libro) -> None:
     arriba.legend(frameon=False, fontsize=9)
     arriba.grid(axis="y", alpha=0.25)
 
-    abajo.bar(rot["mes"], rot["altas"], width=20, color="#2d7d46",
+    abajo.bar(rot["mes"], rot["altas"], width=20, color="#5b8c5a",
               label="Altas y expansiones")
-    abajo.bar(rot["mes"], -rot["bajas"], width=20, color="#d7373f",
+    abajo.bar(rot["mes"], -rot["bajas"], width=20, color="#c1666b",
               label="Devoluciones")
     abajo.axhline(0, color=TINTA, linewidth=0.8)
-    abajo.set_title("Asientos por mes", fontsize=11, color=TINTA, loc="left")
+    abajo.set_title(
+        "Asientos por mes — enero de 2022 es la migración: el libro arranca "
+        "asentando lo que las plazas ya tenían",
+        fontsize=10, color=TINTA, loc="left")
     abajo.legend(frameon=False, fontsize=9, ncols=2)
     abajo.grid(axis="y", alpha=0.25)
 

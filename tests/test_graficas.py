@@ -65,13 +65,43 @@ def test_el_plano_se_dibuja_aunque_la_plaza_este_vacia(mundo):
 def test_la_serie_de_ocupacion_se_dibuja(mundo):
     cat, libro = mundo
     serie = ocupacion.serie_ocupacion(cat, libro)
-    grafica = alt.Chart(serie).mark_line(strokeWidth=2).encode(
+    grafica = alt.Chart(serie).mark_line(
+        strokeWidth=2.5, interpolate="monotone"
+    ).encode(
         x=alt.X("fecha:T", title=None),
         y=alt.Y("ocupacion:Q", title="Ocupación", axis=alt.Axis(format="%"),
                 scale=alt.Scale(domain=[0, 1])),
-        color=alt.Color("plaza:N", title="Plaza"),
-    ).properties(height=260)
+        color=alt.Color("plaza:N", title=None, scale=alt.Scale(
+            domain=list(ocupacion.COLOR_PLAZA),
+            range=list(ocupacion.COLOR_PLAZA.values()))),
+    ).properties(height=280)
     assert _dibuja(grafica) > 1_000
+
+
+def test_cada_plaza_tiene_su_propio_color(mundo):
+    """Con la paleta por defecto dos de las tres salían en azules casi
+    iguales y la serie no se podía leer."""
+    cat, _ = mundo
+    assert set(cat["plaza"]) <= set(ocupacion.COLOR_PLAZA)
+    assert len(set(ocupacion.COLOR_PLAZA.values())) == len(ocupacion.COLOR_PLAZA)
+
+
+def test_todo_giro_pertenece_a_una_familia():
+    """Si se agrega un giro al generador y se olvida su familia, cae en
+    'Otro' en silencio y la mezcla comercial miente."""
+    from src.generar_historia import GIROS
+    sin_familia = [g for g in GIROS if g not in ocupacion.FAMILIA]
+    assert not sin_familia, f"giros sin familia: {sin_familia}"
+    assert set(ocupacion.FAMILIA.values()) == set(ocupacion.ORDEN_FAMILIAS)
+
+
+def test_la_leyenda_no_muestra_familias_ausentes(mundo):
+    cat, libro = mundo
+    inq = ocupacion.por_cliente(libro, None, cat[cat["plaza"] == "PSIS"]["id_local"])
+    familias = inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia)
+    dominio, rango = ocupacion.escala_familias(familias)
+    assert set(dominio) == set(familias)
+    assert len(dominio) == len(rango)
 
 
 def test_la_rotacion_se_dibuja(mundo):
@@ -89,18 +119,31 @@ def test_la_rotacion_se_dibuja(mundo):
 def test_las_graficas_de_inquilinos_se_dibujan(mundo):
     cat, libro = mundo
     inq = ocupacion.por_cliente(libro, None, cat[cat["plaza"] == "PALT"]["id_local"])
-    inq = inq.assign(giro=inq["cliente"].map(MARCA_GIRO).fillna("Otro"))
+    inq = inq.assign(
+        familia=inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia))
+    top = inq.head(12)
 
-    barras = alt.Chart(inq.head(12)).mark_bar().encode(
+    dominio, rango = ocupacion.escala_familias(inq["familia"])
+    color = alt.Color("familia:N", title="Familia comercial",
+                      scale=alt.Scale(domain=dominio, range=rango))
+    altura = 30 * len(top) + 30
+
+    barras = alt.Chart(top).mark_bar(size=22, cornerRadiusEnd=3).encode(
         x=alt.X("m2_ocupados:Q", title="m² ocupados"),
-        y=alt.Y("cliente:N", sort="-x", title=None),
-        color=alt.Color("giro:N", title="Giro"),
-    ).properties(height=320)
-    assert _dibuja(barras) > 1_000
+        y=alt.Y("cliente:N", sort="-x", title=None,
+                scale=alt.Scale(paddingInner=0.25)),
+        color=color,
+    ).properties(width=520, height=altura)
 
-    mezcla = inq.groupby("giro", as_index=False)["m2_ocupados"].sum()
-    dona = alt.Chart(mezcla).mark_arc(innerRadius=55).encode(
-        theta=alt.Theta("m2_ocupados:Q"),
-        color=alt.Color("giro:N", title="Giro"),
-    ).properties(height=320)
-    assert _dibuja(dona) > 1_000
+    mezcla = inq.groupby("familia", as_index=False)["m2_ocupados"].sum()
+    dona = alt.Chart(mezcla).mark_arc(
+        innerRadius=64, outerRadius=122, stroke="#00000040", strokeWidth=1.5
+    ).encode(
+        theta=alt.Theta("m2_ocupados:Q", stack=True),
+        color=color,
+        order=alt.Order("m2_ocupados:Q", sort="descending"),
+    ).properties(width=300, height=altura)
+
+    # Concatenadas es como las dibuja la app: una sola leyenda compartida.
+    juntas = alt.hconcat(barras, dona, spacing=40).resolve_scale(color="shared")
+    assert _dibuja(juntas) > 1_000

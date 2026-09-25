@@ -171,38 +171,59 @@ with tab_plano:
     if inq.empty:
         st.info("Ningún inquilino en esta plaza a esta fecha.")
     else:
-        izq, der = st.columns([3, 2])
+        inq = inq.assign(
+            giro=inq["cliente"].map(MARCA_GIRO).fillna(""),
+            familia=inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia))
+        top = inq.head(12)
 
-        top = inq.head(12).copy()
-        top["giro"] = top["cliente"].map(MARCA_GIRO).fillna("Otro")
-        izq.altair_chart(
-            alt.Chart(top).mark_bar().encode(
-                x=alt.X("m2_ocupados:Q", title="m² ocupados"),
-                y=alt.Y("cliente:N", sort="-x", title=None),
-                color=alt.Color("giro:N", title="Giro",
-                                legend=alt.Legend(orient="bottom", columns=3)),
-                tooltip=[alt.Tooltip("cliente:N", title="Cliente"),
-                         alt.Tooltip("giro:N", title="Giro"),
-                         alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
-                         alt.Tooltip("n_locales:Q", title="Locales"),
-                         alt.Tooltip("locales:N", title="Cuáles")],
-            ).properties(height=320, title="Los 12 mayores, por metros"),
-            width="stretch")
+        # Las dos gráficas van en una sola, concatenadas, para que compartan
+        # **una** leyenda. En dos columnas de Streamlit cada una dibuja la
+        # suya y el lector ve la misma leyenda dos veces.
+        dominio, rango = ocupacion.escala_familias(inq["familia"])
+        color = alt.Color(
+            "familia:N", title="Familia comercial",
+            scale=alt.Scale(domain=dominio, range=rango),
+            legend=alt.Legend(orient="bottom", columns=3, labelLimit=220,
+                              symbolType="square", symbolSize=140))
+        altura = 30 * len(top) + 30
 
-        # La mezcla de giros es la pregunta comercial de fondo: una plaza que
-        # es 60% comida no es la misma que una que es 60% moda, aunque las dos
-        # estén al 90% de ocupación.
-        mezcla = (inq.assign(giro=inq["cliente"].map(MARCA_GIRO).fillna("Otro"))
-                  .groupby("giro", as_index=False)["m2_ocupados"].sum())
-        der.altair_chart(
-            alt.Chart(mezcla).mark_arc(innerRadius=55).encode(
-                theta=alt.Theta("m2_ocupados:Q"),
-                color=alt.Color("giro:N", title="Giro",
-                                legend=alt.Legend(orient="bottom", columns=2)),
-                tooltip=[alt.Tooltip("giro:N", title="Giro"),
-                         alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f")],
-            ).properties(height=320, title="Mezcla comercial, por metros"),
-            width="stretch")
+        barras = alt.Chart(top).mark_bar(
+            size=22, cornerRadiusEnd=3
+        ).encode(
+            x=alt.X("m2_ocupados:Q", title="m² ocupados"),
+            y=alt.Y("cliente:N", sort="-x", title=None,
+                    scale=alt.Scale(paddingInner=0.25)),
+            color=color,
+            tooltip=[alt.Tooltip("cliente:N", title="Cliente"),
+                     alt.Tooltip("giro:N", title="Giro"),
+                     alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
+                     alt.Tooltip("n_locales:Q", title="Locales"),
+                     alt.Tooltip("locales:N", title="Cuáles")],
+        ).properties(width=520, height=altura,
+                     title="Los 12 mayores inquilinos, por metros")
+
+        # La mezcla comercial es la pregunta de fondo: una plaza que es 60%
+        # comida no es la misma que una 60% moda, aunque las dos estén al 90%
+        # de ocupación.
+        mezcla = inq.groupby("familia", as_index=False)["m2_ocupados"].sum()
+        mezcla["parte"] = mezcla["m2_ocupados"] / mezcla["m2_ocupados"].sum()
+        dona = alt.Chart(mezcla).mark_arc(
+            innerRadius=64, outerRadius=122, stroke="#00000040", strokeWidth=1.5
+        ).encode(
+            theta=alt.Theta("m2_ocupados:Q", stack=True),
+            color=color,
+            order=alt.Order("m2_ocupados:Q", sort="descending"),
+            tooltip=[alt.Tooltip("familia:N", title="Familia"),
+                     alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
+                     alt.Tooltip("parte:Q", title="Del total", format=".1%")],
+        ).properties(width=300, height=altura,
+                     title="Mezcla comercial, por metros")
+
+        st.altair_chart(
+            alt.hconcat(barras, dona, spacing=40)
+            .resolve_scale(color="shared")
+            .configure_view(strokeWidth=0),
+            width="content")
 
         st.dataframe(
             inq.rename(columns={
@@ -385,19 +406,26 @@ with tab_baja:
 with tab_hist:
     st.subheader("Ocupación en el tiempo")
     serie = ocupacion.serie_ocupacion(cat, libro)
+    serie["centro"] = serie["plaza"].map(nombre_plaza)
+    orden = [nombre_plaza(c) for c in ocupacion.COLOR_PLAZA]
     st.altair_chart(
-        alt.Chart(serie).mark_line(point=False, strokeWidth=2).encode(
+        alt.Chart(serie).mark_line(strokeWidth=2.5, interpolate="monotone").encode(
             x=alt.X("fecha:T", title=None),
             y=alt.Y("ocupacion:Q", title="Ocupación",
                     axis=alt.Axis(format="%"),
                     scale=alt.Scale(domain=[0, 1])),
-            color=alt.Color("plaza:N", title="Plaza"),
+            color=alt.Color(
+                "centro:N", title=None,
+                scale=alt.Scale(domain=orden,
+                                range=list(ocupacion.COLOR_PLAZA.values())),
+                legend=alt.Legend(orient="bottom", symbolType="stroke",
+                                  symbolStrokeWidth=3)),
             tooltip=[alt.Tooltip("fecha:T", title="Mes", format="%b %Y"),
-                     alt.Tooltip("plaza:N", title="Plaza"),
+                     alt.Tooltip("centro:N", title="Plaza"),
                      alt.Tooltip("ocupacion:Q", title="Ocupación",
                                  format=".1%"),
                      alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f")],
-        ).properties(height=260),
+        ).properties(height=280),
         width="stretch")
     st.caption(
         "Esta serie no se guardó en ningún lado. Se reconstruye recorriendo el "
@@ -407,14 +435,19 @@ with tab_hist:
     rot = ocupacion.rotacion(libro).melt(
         "mes", var_name="movimiento", value_name="n")
     st.altair_chart(
-        alt.Chart(rot).mark_bar().encode(
+        alt.Chart(rot).mark_bar(size=6, cornerRadiusEnd=1).encode(
             x=alt.X("mes:T", title=None),
             y=alt.Y("n:Q", title="Asientos"),
             color=alt.Color("movimiento:N", title=None,
                             scale=alt.Scale(domain=["altas", "bajas"],
-                                            range=["#2d7d46", "#d7373f"])),
-            tooltip=["mes:T", "movimiento:N", "n:Q"],
-        ).properties(height=200),
+                                            range=["#5b8c5a", "#c1666b"]),
+                            legend=alt.Legend(orient="bottom",
+                                              symbolType="square",
+                                              symbolSize=140)),
+            tooltip=[alt.Tooltip("mes:T", title="Mes", format="%b %Y"),
+                     alt.Tooltip("movimiento:N", title="Movimiento"),
+                     alt.Tooltip("n:Q", title="Asientos")],
+        ).properties(height=220),
         width="stretch")
 
     st.subheader("Contratos")
