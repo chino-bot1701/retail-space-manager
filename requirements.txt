@@ -1,4 +1,7 @@
-streamlit>=1.40
-pandas>=2.0
-numpy>=1.26
-altair>=5.2
+# Cotas por arriba a propósito: la app está desplegada y una versión mayor
+# nueva de cualquiera de estas cuatro la rompería sin que nadie tocara el
+# código. El plano es una gráfica de capas de Altair y necesita Vega-Lite 5+.
+streamlit>=1.40,<2
+pandas>=2.0,<3
+numpy>=1.26,<3
+altair>=5.2,<7
