@@ -174,19 +174,25 @@ with tab_plano:
         st.info("Ningún inquilino en esta plaza a esta fecha.")
     else:
         inq = inq.assign(
-            giro=inq["cliente"].map(MARCA_GIRO).fillna(""),
+            giro=inq["cliente"].map(MARCA_GIRO).map(ocupacion.giro_visible),
             familia=inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia))
         top = inq.head(12)
 
         # Las dos gráficas van en una sola, concatenadas, para que compartan
         # **una** leyenda. En dos columnas de Streamlit cada una dibuja la
         # suya y el lector ve la misma leyenda dos veces.
-        dominio, rango = ocupacion.escala_familias(inq["familia"])
+        dominio, rango = ocupacion.escala_giros(inq["giro"])
         color = alt.Color(
-            "familia:N", title="Familia comercial",
+            "giro:N", title="Giro",
             scale=alt.Scale(domain=dominio, range=rango),
-            legend=alt.Legend(orient="bottom", columns=3, labelLimit=220,
+            legend=alt.Legend(orient="bottom", columns=3, labelLimit=200,
                               symbolType="square", symbolSize=140))
+        tooltip = [alt.Tooltip("cliente:N", title="Cliente"),
+                   alt.Tooltip("giro:N", title="Giro"),
+                   alt.Tooltip("familia:N", title="Familia"),
+                   alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
+                   alt.Tooltip("n_locales:Q", title="Locales"),
+                   alt.Tooltip("locales:N", title="Cuáles")]
         altura = 30 * len(top) + 30
 
         barras = alt.Chart(top).mark_bar(
@@ -196,26 +202,29 @@ with tab_plano:
             y=alt.Y("cliente:N", sort="-x", title=None,
                     scale=alt.Scale(paddingInner=0.25)),
             color=color,
-            tooltip=[alt.Tooltip("cliente:N", title="Cliente"),
-                     alt.Tooltip("giro:N", title="Giro"),
-                     alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
-                     alt.Tooltip("n_locales:Q", title="Locales"),
-                     alt.Tooltip("locales:N", title="Cuáles")],
+            tooltip=tooltip,
         ).properties(width=520, height=altura,
                      title="Los 12 mayores inquilinos, por metros")
 
         # La mezcla comercial es la pregunta de fondo: una plaza que es 60%
         # comida no es la misma que una 60% moda, aunque las dos estén al 90%
         # de ocupación.
-        mezcla = inq.groupby("familia", as_index=False)["m2_ocupados"].sum()
+        #
+        # Los segmentos van en orden de giro, no de tamaño: así los tonos de
+        # una misma familia quedan contiguos y la dona se lee como cinco
+        # bloques en vez de once rebanadas sueltas.
+        mezcla = inq.groupby(["giro", "familia"], as_index=False)["m2_ocupados"].sum()
+        mezcla["orden"] = mezcla["giro"].map(
+            {g: i for i, g in enumerate(ocupacion.ORDEN_GIROS)}).fillna(99)
         mezcla["parte"] = mezcla["m2_ocupados"] / mezcla["m2_ocupados"].sum()
         dona = alt.Chart(mezcla).mark_arc(
             innerRadius=64, outerRadius=122, stroke="#00000040", strokeWidth=1.5
         ).encode(
             theta=alt.Theta("m2_ocupados:Q", stack=True),
             color=color,
-            order=alt.Order("m2_ocupados:Q", sort="descending"),
-            tooltip=[alt.Tooltip("familia:N", title="Familia"),
+            order=alt.Order("orden:Q"),
+            tooltip=[alt.Tooltip("giro:N", title="Giro"),
+                     alt.Tooltip("familia:N", title="Familia"),
                      alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
                      alt.Tooltip("parte:Q", title="Del total", format=".1%")],
         ).properties(width=300, height=altura,
@@ -226,6 +235,10 @@ with tab_plano:
             .resolve_scale(color="shared")
             .configure_view(strokeWidth=0),
             width="content")
+        st.caption(
+            "Los once giros están agrupados por color: los azules son los "
+            "formatos grandes, los naranjas son alimentos, y así. El tono "
+            "distingue el giro; la familia está en el tooltip.")
 
         # `familia` se omite: ya está dicha por el color y la leyenda. `giro`
         # sí se muestra, porque es el detalle que la agrupación esconde.

@@ -5,7 +5,7 @@
 > negative-square-metre entry. Occupancy is the running sum, so the history and
 > the current state cannot drift apart.
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB) ![Streamlit](https://img.shields.io/badge/Streamlit-leasing%20app-FF4B4B) ![Altair](https://img.shields.io/badge/Altair-floor%20plan-1f77b4) ![tests](https://img.shields.io/badge/tests-53%20passing-2b6cb0)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB) ![Streamlit](https://img.shields.io/badge/Streamlit-leasing%20app-FF4B4B) ![Altair](https://img.shields.io/badge/Altair-floor%20plan-1f77b4) ![tests](https://img.shields.io/badge/tests-55%20passing-2b6cb0)
 
 > [!IMPORTANT]
 > **Rebuild of a production R/Shiny app, on synthetic data.** The original runs
@@ -234,7 +234,7 @@ python scripts/run_demo.py          # 25 assertions
 streamlit run app/gestor.py         # the app
 
 pip install -r requirements-dev.txt
-pytest -q                           # 53 tests
+pytest -q                           # 55 tests
 ```
 
 **No credentials, no database, no environment variables.** The app generates its

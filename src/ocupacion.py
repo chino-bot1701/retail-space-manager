@@ -60,9 +60,32 @@ ORDEN_FAMILIAS = [
     "Financieros y telecom",
 ]
 
-PALETA_FAMILIAS = ["#3d84a8", "#e07a5f", "#f2cc8f", "#81b29a", "#9a8c98"]
+# Los once giros, agrupados visualmente. Cada familia tiene un tono y sus
+# giros son variaciones de ese tono, de más oscuro a más claro. Así se
+# distinguen los once y, al mismo tiempo, se lee la estructura: los azules son
+# los formatos grandes, los naranjas son comida, y así.
+#
+# El orden de la lista es el orden de la leyenda y el de los segmentos de la
+# dona, para que los giros de una misma familia queden juntos en las dos.
+GIROS_ORDENADOS: list[tuple[str, str]] = [
+    ("Ancla",                 "#24596f"),
+    ("Entretenimiento",       "#3d84a8"),
+    ("Gimnasio",              "#7fb2cc"),
+    ("Restaurante",           "#a8452f"),
+    ("Comida rápida",         "#e07a5f"),
+    ("Café y postres",        "#f0ab93"),
+    ("Moda",                  "#e6b85c"),
+    ("Salud y belleza",       "#4f8468"),
+    ("Servicios",             "#94c2a8"),
+    ("Servicios financieros", "#6f5f74"),
+    ("Telecomunicaciones",    "#b3a3b8"),
+]
+
+ORDEN_GIROS = [g for g, _ in GIROS_ORDENADOS]
+COLOR_GIRO = dict(GIROS_ORDENADOS)
 
 OTRA = "Otro"
+COLOR_OTRA = "#5c5c66"
 
 # Un color por plaza, fijo. Con la paleta por defecto, dos de las tres salían
 # en tonos de azul casi iguales y la serie histórica no se podía leer.
@@ -70,24 +93,31 @@ COLOR_PLAZA = {"PALT": "#3d84a8", "PBER": "#e07a5f", "PSIS": "#81b29a"}
 
 
 def familia(giro: str | None) -> str:
-    """La familia de un giro. Una marca escrita a mano en la demo no tiene
-    giro conocido y cae en 'Otro'."""
+    """La familia de un giro. Ordena la paleta y se muestra en el tooltip:
+    el color dice el giro, y la familia dice de qué bloque forma parte."""
     return FAMILIA.get(giro or "", OTRA)
 
 
-def escala_familias(presentes: Iterable[str] | None = None
-                    ) -> tuple[list[str], list[str]]:
-    """Dominio y rango de color, para que las gráficas los compartan.
+def giro_visible(giro: str | None) -> str:
+    """El giro tal como se pinta. Una marca escrita a mano en la demo no
+    tiene giro conocido y cae en 'Otro'."""
+    return giro if giro in COLOR_GIRO else OTRA
 
-    Con `presentes` se recortan las familias que no aparecen: una leyenda con
-    entradas que no están en la gráfica hace buscar algo que no existe. El
-    orden y el color de las que sí aparecen no cambian.
+
+def escala_giros(presentes: Iterable[str] | None = None
+                 ) -> tuple[list[str], list[str]]:
+    """Dominio y rango de color de los giros, en orden de familia.
+
+    Con `presentes` se recortan los que no aparecen en la plaza: una leyenda
+    con entradas que no están en la gráfica hace buscar algo que no existe.
+    El orden y el color de los que sí aparecen no cambian, así que un giro
+    conserva su color entre plazas y entre recargas.
     """
-    pares = list(zip(ORDEN_FAMILIAS + [OTRA], PALETA_FAMILIAS + ["#5c5c66"]))
+    pares = GIROS_ORDENADOS + [(OTRA, COLOR_OTRA)]
     if presentes is not None:
         hay = set(presentes)
-        pares = [(f, c) for f, c in pares if f in hay]
-    return [f for f, _ in pares], [c for _, c in pares]
+        pares = [(g, c) for g, c in pares if g in hay]
+    return [g for g, _ in pares], [c for _, c in pares]
 
 
 def estado(cat: pd.DataFrame, libro: Libro,

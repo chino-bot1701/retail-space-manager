@@ -95,12 +95,29 @@ def test_todo_giro_pertenece_a_una_familia():
     assert set(ocupacion.FAMILIA.values()) == set(ocupacion.ORDEN_FAMILIAS)
 
 
-def test_la_leyenda_no_muestra_familias_ausentes(mundo):
+def test_todo_giro_tiene_color_y_ninguno_se_repite():
+    from src.generar_historia import GIROS
+    sin_color = [g for g in GIROS if g not in ocupacion.COLOR_GIRO]
+    assert not sin_color, f"giros sin color: {sin_color}"
+    colores = list(ocupacion.COLOR_GIRO.values())
+    assert len(set(colores)) == len(colores)
+
+
+def test_los_giros_van_agrupados_por_familia_en_la_leyenda():
+    """El orden de la leyenda y de la dona. Si un giro se cuela fuera de su
+    bloque, los tonos de una familia dejan de quedar contiguos y la dona se
+    lee como once rebanadas sueltas en vez de cinco bloques."""
+    familias = [ocupacion.familia(g) for g in ocupacion.ORDEN_GIROS]
+    bloques = [f for i, f in enumerate(familias) if i == 0 or f != familias[i - 1]]
+    assert len(bloques) == len(set(bloques)),         f"una familia aparece en dos bloques separados: {familias}"
+
+
+def test_la_leyenda_no_muestra_giros_ausentes(mundo):
     cat, libro = mundo
     inq = ocupacion.por_cliente(libro, None, cat[cat["plaza"] == "PSIS"]["id_local"])
-    familias = inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia)
-    dominio, rango = ocupacion.escala_familias(familias)
-    assert set(dominio) == set(familias)
+    giros = inq["cliente"].map(MARCA_GIRO).map(ocupacion.giro_visible)
+    dominio, rango = ocupacion.escala_giros(giros)
+    assert set(dominio) == set(giros)
     assert len(dominio) == len(rango)
 
 
@@ -120,11 +137,12 @@ def test_las_graficas_de_inquilinos_se_dibujan(mundo):
     cat, libro = mundo
     inq = ocupacion.por_cliente(libro, None, cat[cat["plaza"] == "PALT"]["id_local"])
     inq = inq.assign(
+        giro=inq["cliente"].map(MARCA_GIRO).map(ocupacion.giro_visible),
         familia=inq["cliente"].map(MARCA_GIRO).map(ocupacion.familia))
     top = inq.head(12)
 
-    dominio, rango = ocupacion.escala_familias(inq["familia"])
-    color = alt.Color("familia:N", title="Familia comercial",
+    dominio, rango = ocupacion.escala_giros(inq["giro"])
+    color = alt.Color("giro:N", title="Giro",
                       scale=alt.Scale(domain=dominio, range=rango))
     altura = 30 * len(top) + 30
 
@@ -135,13 +153,15 @@ def test_las_graficas_de_inquilinos_se_dibujan(mundo):
         color=color,
     ).properties(width=520, height=altura)
 
-    mezcla = inq.groupby("familia", as_index=False)["m2_ocupados"].sum()
+    mezcla = inq.groupby("giro", as_index=False)["m2_ocupados"].sum()
+    mezcla["orden"] = mezcla["giro"].map(
+        {g: i for i, g in enumerate(ocupacion.ORDEN_GIROS)}).fillna(99)
     dona = alt.Chart(mezcla).mark_arc(
         innerRadius=64, outerRadius=122, stroke="#00000040", strokeWidth=1.5
     ).encode(
         theta=alt.Theta("m2_ocupados:Q", stack=True),
         color=color,
-        order=alt.Order("m2_ocupados:Q", sort="descending"),
+        order=alt.Order("orden:Q"),
     ).properties(width=300, height=altura)
 
     # Concatenadas es como las dibuja la app: una sola leyenda compartida.
