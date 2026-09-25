@@ -117,10 +117,27 @@ afirmar(b2 < 0.051, f"el plano de {corte:%b %Y} cuadra con el libro cortado")
 
 r_antes = ocupacion.resumen(antes)
 r_hoy = ocupacion.resumen(est)
-print(f"  ocupación jun-2023 {r_antes['ocupacion_m2']:.1%} → "
-      f"hoy {r_hoy['ocupacion_m2']:.1%}")
-afirmar(r_antes["ocupacion_m2"] < r_hoy["ocupacion_m2"],
-        "la plaza se llenó con el tiempo")
+
+# Cada plaza tiene su propia trayectoria y **no van en la misma dirección**.
+# La joven se llena; la madura pierde ocupación conforme vencen contratos.
+# Afirmar que "la ocupación sube" sobre el agregado era medir mal: el
+# agregado baja, y eso es correcto.
+trayectoria = {}
+for codigo in PLAZAS:
+    sub = cat[cat["plaza"] == codigo]
+    a = ocupacion.resumen(ocupacion.estado(sub, libro, corte))["ocupacion_m2"]
+    b = ocupacion.resumen(ocupacion.estado(sub, libro))["ocupacion_m2"]
+    trayectoria[codigo] = (a, b)
+    print(f"  {nombre_plaza(codigo):18s} jun-2023 {a:6.1%} → hoy {b:6.1%}"
+          f"   ({'+' if b > a else ''}{(b - a) * 100:.1f} pp)")
+
+joven = max(PLAZAS, key=lambda c: PLAZAS[c]["anio_apertura"])
+madura = min(PLAZAS, key=lambda c: PLAZAS[c]["anio_apertura"])
+afirmar(trayectoria[joven][1] > trayectoria[joven][0] + 0.05,
+        f"la plaza joven ({nombre_plaza(joven)}) se llenó con el tiempo")
+afirmar(trayectoria[madura][0] > 0.85,
+        f"la plaza madura ({nombre_plaza(madura)}) ya estaba llena en 2023")
+print(f"  agregado {r_antes['ocupacion_m2']:.1%} → {r_hoy['ocupacion_m2']:.1%}")
 
 # ---------------------------------------------------------------------------
 titulo("6 · La ocupación se parece a la de una plaza real")
@@ -137,8 +154,22 @@ afirmar(0.70 <= r_hoy["ocupacion_m2"] <= 0.95,
         f"la ocupación global cae entre 70% y 95% ({r_hoy['ocupacion_m2']:.1%})")
 afirmar(r_hoy["locales_parciales"] >= 2,
         f"hay locales compartidos entre inquilinos ({r_hoy['locales_parciales']})")
-afirmar(abs(r_hoy["ocupacion_m2"] - r_hoy["ocupacion_locales"]) > 0.005,
-        "contar metros y contar locales no da lo mismo")
+# Por qué la ocupación se reporta por metros y no por locales.
+# Afirmar que las dos cifras diferían hoy era una aserción floja: con esta
+# semilla coinciden por casualidad. Lo que importa no es que hoy difieran,
+# sino **cuánto se mueve cada una cuando se vacía un ancla** — que es el caso
+# que el indicador tiene que detectar.
+ancla = est.loc[est["m2_totales"].idxmax()]
+sin_ancla = est.copy()
+sin_ancla.loc[sin_ancla["id_local"] == ancla["id_local"],
+              ["m2_ocupados", "estado"]] = [0.0, "libre"]
+r_sin = ocupacion.resumen(sin_ancla)
+caida_m2 = (r_hoy["ocupacion_m2"] - r_sin["ocupacion_m2"]) * 100
+caida_loc = (r_hoy["ocupacion_locales"] - r_sin["ocupacion_locales"]) * 100
+print(f"  si se vacía el ancla {ancla['id_local']} ({ancla['m2_totales']:,.0f} m²): "
+      f"la ocupación por metros cae {caida_m2:.1f} pp y por locales {caida_loc:.1f} pp")
+afirmar(caida_m2 > 3 * caida_loc,
+        "un ancla vacía mueve la cifra por metros mucho más que la de locales")
 
 # ---------------------------------------------------------------------------
 titulo("7 · El historial contesta lo que pedía operación")

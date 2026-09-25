@@ -70,7 +70,12 @@ def dibujar(est: pd.DataFrame, titulo: str, altura: int = 420) -> alt.LayerChart
     relleno = base.transform_filter(
         alt.datum.ocupacion_pct > 0
     ).mark_rect(stroke=None).encode(
-        y=alt.Y("y:Q"),
+        # `axis=None` en TODAS las capas, no solo en una.
+        # Si una capa anula el eje y otra lo deja por defecto, Vega-Lite
+        # revienta al fusionarlas —`Cannot read properties of undefined` en
+        # `parseAxesAndHeaders`— y el plano no se dibuja. `AppTest` no lo ve:
+        # el error ocurre en el navegador, no en Python.
+        y=alt.Y("y:Q", axis=None),
         y2="y_ocupado:Q",
         color=alt.Color(
             "estado_txt:N",
@@ -90,6 +95,9 @@ def dibujar(est: pd.DataFrame, titulo: str, altura: int = 420) -> alt.LayerChart
         tooltip=tooltip,
     )
 
+    # Sin `width="container"`: en un chart de capas, Vega-Lite lo combina mal
+    # con el ancho que impone Streamlit y el plano sale sin ancho — invisible.
+    # Se deja que Streamlit mande, con `use_container_width=True`.
     return (contorno + relleno + numero).properties(
-        title=titulo, height=altura, width="container"
+        title=titulo, height=altura
     ).configure_view(strokeWidth=0).configure_axis(grid=False)

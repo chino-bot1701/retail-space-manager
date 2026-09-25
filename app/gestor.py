@@ -78,7 +78,7 @@ hoy = max(FIN, libro.asientos["fecha"].max().date())
 # Encabezado
 # ---------------------------------------------------------------------------
 
-st.title("🏬 Gestor de espacios comerciales")
+st.title("Gestor de espacios comerciales")
 st.caption(
     "Ocupación, contratos e historial de tres plazas comerciales. **Todos los "
     "datos son sintéticos** — ninguna plaza, marca ni contrato es real. "
@@ -111,7 +111,8 @@ if aviso := st.session_state.pop("aviso", None):
     st.success(aviso)
 
 tab_plano, tab_alta, tab_baja, tab_hist = st.tabs(
-    ["📐 Plano y disponibilidad", "➕ Rentar", "➖ Liberar", "📜 Historial"])
+    ["Plano y disponibilidad", "Rentar espacio", "Liberar espacio",
+     "Historial y rotación"])
 
 
 # ---------------------------------------------------------------------------
@@ -164,13 +165,55 @@ with tab_plano:
             "contratos": "Contratos"}),
         hide_index=True, width="stretch", height=320)
 
-    st.subheader("Inquilinos")
-    st.dataframe(
-        ocupacion.por_cliente(libro, corte).rename(columns={
-            "cliente": "Cliente", "m2_ocupados": "m² ocupados",
-            "locales": "Locales", "n_locales": "Núm. locales",
-            "n_contratos": "Núm. contratos"}),
-        hide_index=True, width="stretch", height=280)
+    st.subheader("Quién ocupa la plaza")
+    inq = ocupacion.por_cliente(libro, corte, cat_p["id_local"])
+
+    if inq.empty:
+        st.info("Ningún inquilino en esta plaza a esta fecha.")
+    else:
+        izq, der = st.columns([3, 2])
+
+        top = inq.head(12).copy()
+        top["giro"] = top["cliente"].map(MARCA_GIRO).fillna("Otro")
+        izq.altair_chart(
+            alt.Chart(top).mark_bar().encode(
+                x=alt.X("m2_ocupados:Q", title="m² ocupados"),
+                y=alt.Y("cliente:N", sort="-x", title=None),
+                color=alt.Color("giro:N", title="Giro",
+                                legend=alt.Legend(orient="bottom", columns=3)),
+                tooltip=[alt.Tooltip("cliente:N", title="Cliente"),
+                         alt.Tooltip("giro:N", title="Giro"),
+                         alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f"),
+                         alt.Tooltip("n_locales:Q", title="Locales"),
+                         alt.Tooltip("locales:N", title="Cuáles")],
+            ).properties(height=320, title="Los 12 mayores, por metros"),
+            width="stretch")
+
+        # La mezcla de giros es la pregunta comercial de fondo: una plaza que
+        # es 60% comida no es la misma que una que es 60% moda, aunque las dos
+        # estén al 90% de ocupación.
+        mezcla = (inq.assign(giro=inq["cliente"].map(MARCA_GIRO).fillna("Otro"))
+                  .groupby("giro", as_index=False)["m2_ocupados"].sum())
+        der.altair_chart(
+            alt.Chart(mezcla).mark_arc(innerRadius=55).encode(
+                theta=alt.Theta("m2_ocupados:Q"),
+                color=alt.Color("giro:N", title="Giro",
+                                legend=alt.Legend(orient="bottom", columns=2)),
+                tooltip=[alt.Tooltip("giro:N", title="Giro"),
+                         alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f")],
+            ).properties(height=320, title="Mezcla comercial, por metros"),
+            width="stretch")
+
+        st.dataframe(
+            inq.rename(columns={
+                "cliente": "Cliente", "m2_ocupados": "m² ocupados",
+                "locales": "Locales", "n_locales": "Núm. locales",
+                "n_contratos": "Núm. contratos"}),
+            hide_index=True, width="stretch", height=280)
+        st.caption(
+            f"{len(inq)} inquilinos en {nombre_plaza(codigo)}. Para la ocupación "
+            "mes a mes, la rotación y el libro completo, ve a "
+            "**Historial y rotación**.")
 
 
 # ---------------------------------------------------------------------------
@@ -354,7 +397,7 @@ with tab_hist:
                      alt.Tooltip("ocupacion:Q", title="Ocupación",
                                  format=".1%"),
                      alt.Tooltip("m2_ocupados:Q", title="m²", format=",.0f")],
-        ).properties(height=260, width="container"),
+        ).properties(height=260),
         width="stretch")
     st.caption(
         "Esta serie no se guardó en ningún lado. Se reconstruye recorriendo el "
@@ -371,7 +414,7 @@ with tab_hist:
                             scale=alt.Scale(domain=["altas", "bajas"],
                                             range=["#2d7d46", "#d7373f"])),
             tooltip=["mes:T", "movimiento:N", "n:Q"],
-        ).properties(height=200, width="container"),
+        ).properties(height=200),
         width="stretch")
 
     st.subheader("Contratos")

@@ -13,6 +13,7 @@ casos justifica mantener el estado a mano.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date
 
 import numpy as np
@@ -86,9 +87,18 @@ def resumen(est: pd.DataFrame) -> dict[str, float]:
     }
 
 
-def por_cliente(libro: Libro, fecha: date | None = None) -> pd.DataFrame:
-    """Quién ocupa qué, ordenado por metros. El tablero de inquilinos."""
+def por_cliente(libro: Libro, fecha: date | None = None,
+                locales: Iterable[str] | None = None) -> pd.DataFrame:
+    """Quién ocupa qué, ordenado por metros. El tablero de inquilinos.
+
+    `locales` acota a una plaza. Sin él la tabla sale global, que es correcto
+    para la dirección y **engañoso dentro de la vista de una plaza**: una
+    marca con sucursal en las tres aparecía con locales de las otras dos
+    mientras la pantalla decía "Plaza Bernal".
+    """
     vivos = libro.contratos_activos(fecha)
+    if locales is not None:
+        vivos = vivos[vivos["id_local"].isin(set(locales))]
     if vivos.empty:
         return pd.DataFrame(columns=["cliente", "m2_ocupados", "locales",
                                      "n_locales", "n_contratos"])

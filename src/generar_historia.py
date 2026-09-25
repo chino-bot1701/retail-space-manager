@@ -30,93 +30,68 @@ FIN = date(2026, 8, 31)
 # cafetería rota cada dieciocho meses.
 GIROS = {
     "Ancla": {
-        "marcas": ["Autoservicio Miramar", "Tienda Verano", "Almacenes Rueda"
-                   "Mercado Bastion",
-                   "Surtidora Peniche",],
+        "marcas": ["Autoservicio Miramar", "Tienda Verano", "Almacenes Rueda",
+                   "Mercado Bastión", "Surtidora Peniche"],
         "m2": (900, 1800), "meses": (96, 144), "p_expande": 0.05,
     },
     "Entretenimiento": {
-        "marcas": ["Cines Meridiano", "Boliche Astral", "Parque Jícara"
-                   "Arena Lumbre",
-                   "Laberinto Kiro",],
+        "marcas": ["Cines Meridiano", "Boliche Astral", "Parque Jícara",
+                   "Arena Lumbre", "Laberinto Kiro"],
         "m2": (600, 1400), "meses": (72, 120), "p_expande": 0.08,
     },
     "Gimnasio": {
-        "marcas": ["Fuerza Nogal", "Estudio Vértice"
-                   "Ritmo Cardon",
-                   "Box Ferrer",],
+        "marcas": ["Fuerza Nogal", "Estudio Vértice", "Ritmo Cardón",
+                   "Box Ferrer"],
         "m2": (400, 900), "meses": (48, 96), "p_expande": 0.12,
     },
     "Moda": {
         "marcas": ["Vistoria", "Rambla Nueve", "Tejido Norte", "Casa Lumen",
-                   "Indigo Ocho", "Sastrería Bruma", "Calzado Peral"
-                   "Lino Quinto",
-                   "Panal Denim",
-                   "Atelier Ruda",
-                   "Zapateria Volcan",
-                   "Bordado Sur",
-                   "Marea Textil",
-                   "Perchero Nueve",],
+                   "Índigo Ocho", "Sastrería Bruma", "Calzado Peral",
+                   "Lino Quinto", "Panal Denim", "Atelier Ruda",
+                   "Zapatería Volcán", "Bordado Sur", "Marea Textil",
+                   "Perchero Nueve"],
         "m2": (90, 320), "meses": (36, 72), "p_expande": 0.20,
     },
     "Restaurante": {
         "marcas": ["Brasa Bruna", "Grill Almendral", "Parrilla Tolvanera",
-                   "Cocina Tepeyac", "Mariscos Tinaja"
-                   "Fonda Retama",
-                   "Asador Quiroz",
-                   "Trattoria Belen",
-                   "Cantina Ocaso",
-                   "Barra Zamora",],
+                   "Cocina Tepeyac", "Mariscos Tinaja", "Fonda Retama",
+                   "Asador Quiroz", "Trattoria Belén", "Cantina Ocaso",
+                   "Barra Zamora"],
         "m2": (120, 380), "meses": (30, 66), "p_expande": 0.16,
     },
     "Comida rápida": {
         "marcas": ["Pollo Kaibó", "Taquería El Sauco", "Wok Sereno",
-                   "Burger Ocotal", "Pizza Murmullo"
-                   "Alitas Fogon",
-                   "Torteria Nieto",
-                   "Sushi Repique",
-                   "Baguette Ciervo",
-                   "Arepas Tobal",],
+                   "Burger Ocotal", "Pizza Murmullo", "Alitas Fogón",
+                   "Tortería Nieto", "Sushi Repique", "Baguette Ciervo",
+                   "Arepas Tobal"],
         "m2": (45, 120), "meses": (24, 54), "p_expande": 0.10,
     },
     "Café y postres": {
         "marcas": ["Café Muérdago", "Helados Piamonte", "Repostería Alondra",
-                   "Té Bahía"
-                   "Tostado Once",
-                   "Churros Nimbo",
-                   "Nieves Corvina",
-                   "Panaderia Solaz",],
+                   "Té Bahía", "Tostado Once", "Churros Nimbo",
+                   "Nieves Corvina", "Panadería Solaz"],
         "m2": (30, 90), "meses": (18, 48), "p_expande": 0.14,
     },
     "Servicios financieros": {
         "marcas": ["Banco del Istmo", "Banco Norte", "Crédito Sauce",
-                   "Caja Ribera"
-                   "Banco Altavista",
-                   "Financiera Ebano",],
+                   "Caja Ribera", "Banco Altavista", "Financiera Ébano"],
         "m2": (80, 200), "meses": (60, 120), "p_expande": 0.06,
     },
     "Telecomunicaciones": {
-        "marcas": ["Celnor", "Fibra Nítida", "Enlace Zafiro"
-                   "Movil Quetzal",
-                   "Redes Tamarindo",],
+        "marcas": ["Celnor", "Fibra Nítida", "Enlace Zafiro",
+                   "Móvil Quetzal", "Redes Tamarindo"],
         "m2": (40, 110), "meses": (36, 72), "p_expande": 0.18,
     },
     "Salud y belleza": {
         "marcas": ["Farmacia Trébol", "Óptica Candil", "Estética Rosal",
-                   "Clínica Aliso"
-                   "Botica Genciana",
-                   "Barberia Roble",
-                   "Spa Amaranto",
-                   "Laboratorio Cenit",],
+                   "Clínica Aliso", "Botica Genciana", "Barbería Roble",
+                   "Spa Amaranto", "Laboratorio Cenit"],
         "m2": (50, 160), "meses": (30, 66), "p_expande": 0.12,
     },
     "Servicios": {
         "marcas": ["Lavandería Nube", "Cerrajería Pinar", "Agencia Duna",
-                   "Papelería Cantera"
-                   "Tintoreria Faro",
-                   "Copiadora Juno",
-                   "Viajes Almendro",
-                   "Reparadora Tizon",],
+                   "Papelería Cantera", "Tintorería Faro", "Copiadora Juno",
+                   "Viajes Almendro", "Reparadora Tizón"],
         "m2": (25, 80), "meses": (18, 42), "p_expande": 0.08,
     },
 }
@@ -247,6 +222,27 @@ def generar(semilla: int = SEMILLA, inicio: date = INICIO,
                 + mes.month - 1
             meta = _meta_ocupacion(meses_abierta, rng)
 
+            # --- Expansiones: el inquilino sentado tiene preferencia ------
+            # Van antes de las altas a proposito. Si corren despues, el
+            # bucle de altas ya llenó la plaza y no queda nada que
+            # expandir: la primera version generó cero expansiones en
+            # cuatro años. En la realidad el que ya está adentro se entera
+            # primero del local de al lado.
+            for cid, (marca, _) in list(vivos.items()):
+                if not cid.startswith(codigo):
+                    continue
+                if rng.random() > GIROS[MARCA_GIRO[marca]]["p_expande"] / 12:
+                    continue
+                tramos = _colocar(disp, totales, vecinos, rng)
+                if tramos is None or sum(tramos.values()) > 260:
+                    continue
+                try:
+                    libro.expansion(reloj.siguiente(rng), cid, marca, tramos)
+                except AsientoInvalido:
+                    continue
+                for k, v in tramos.items():
+                    disp[k] -= v
+
             # --- Altas: se coloca hasta alcanzar la meta del mes ---------
             # El tope es alto a proposito: el primer mes del libro tiene que
             # alcanzar a colocar la plaza entera de una vez (es la migracion
@@ -286,24 +282,6 @@ def generar(semilla: int = SEMILLA, inicio: date = INICIO,
                 if meses_abierta <= 6:
                     plazo = max(12, int(plazo * rng.uniform(0.30, 1.0)))
                 vivos[cid] = (marca, mes + pd.DateOffset(months=plazo))
-
-            # --- Expansiones -------------------------------------------
-            for cid, (marca, _) in list(vivos.items()):
-                if not cid.startswith(codigo):
-                    continue
-                if rng.random() > GIROS[MARCA_GIRO[marca]]["p_expande"] / 12:
-                    continue
-                if (tot_plaza - sum(disp.values())) / tot_plaza >= meta:
-                    break
-                tramos = _colocar(disp, totales, vecinos, rng)
-                if tramos is None or sum(tramos.values()) > 260:
-                    continue
-                try:
-                    libro.expansion(reloj.siguiente(rng), cid, marca, tramos)
-                except AsientoInvalido:
-                    continue
-                for k, v in tramos.items():
-                    disp[k] -= v
 
             # --- Bajas: vence el contrato y el inquilino entrega --------
             for cid, (marca, vence) in list(vivos.items()):

@@ -5,7 +5,7 @@
 > negative-square-metre entry. Occupancy is the running sum, so the history and
 > the current state cannot drift apart.
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB) ![Streamlit](https://img.shields.io/badge/Streamlit-leasing%20app-FF4B4B) ![Altair](https://img.shields.io/badge/Altair-floor%20plan-1f77b4) ![tests](https://img.shields.io/badge/tests-43%20passing-2b6cb0)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB) ![Streamlit](https://img.shields.io/badge/Streamlit-leasing%20app-FF4B4B) ![Altair](https://img.shields.io/badge/Altair-floor%20plan-1f77b4) ![tests](https://img.shields.io/badge/tests-50%20passing-2b6cb0)
 
 > [!IMPORTANT]
 > **Rebuild of a production R/Shiny app, on synthetic data.** The original runs
@@ -135,6 +135,32 @@ four other names that break naive concatenation.
 
 ---
 
+## A chart that does not draw is a test you do not have
+
+The floor plan shipped to production **invisible**. One layer set `axis=None`
+and another left the axis at its default; merging them, Vega-Lite threw
+`Cannot read properties of undefined` inside `parseAxesAndHeaders` and drew
+nothing.
+
+Nothing in Python noticed. Streamlit's `AppTest` runs the script, and the script
+ran fine — building a chart object always succeeds. **The failure happens in the
+browser**, which no Python test was looking at.
+
+So `tests/test_graficas.py` compiles every chart with `vl_convert`, the same
+Vega-Lite the browser runs, and asserts a real PNG comes out:
+
+```python
+def _dibuja(grafica):
+    return len(vlc.vegalite_to_png(grafica.to_json(), scale=1))
+```
+
+Seven tests: the plan at every level of all three centres, the plan of an
+*empty* centre on day one of the ledger, the occupancy series, the turnover
+bars, and both tenant charts. The bug that reached production now fails in
+eleven seconds locally.
+
+---
+
 ## The data
 
 Generated, not anonymized.
@@ -144,9 +170,9 @@ Generated, not anonymized.
 | Shopping centres | 3 (opened 2019, 2021 and 2022) |
 | Units | 157, including 5 anchor boxes |
 | Leasable area | 26,273 m² |
-| Ledger | 383 entries, Jan 2022 → Aug 2026 |
-| Contracts | 265 · 157 active · 108 closed |
-| Tenants | 72 fictional brands across 11 categories |
+| Ledger | 406 entries, Jan 2022 → Aug 2026 |
+| Contracts | 221 · 128 active · 93 closed |
+| Tenants | 83 fictional brands across 11 categories |
 
 The generator does not write the ledger directly — **it calls the same API the
 app calls** (`Libro.alta`, `.expansion`, `.baja_total`). If an invariant breaks,
@@ -158,29 +184,39 @@ Each centre has its own lease-up curve, counted from **its own opening year**:
 
 Paseo Altamira was already mature when the ledger starts, so January 2022 is a
 migration of the state it already had. Paseo San Isidro opens that month and
-fills over three years. Neither centre ever reaches 100% — one unit is always
-under fit-out or between tenants, and a dashboard showing 100% is a dashboard
-that is lying.
+fills over three years. **The three do not move in the same direction:**
+
+| | Jun 2023 | Today | |
+|---|---|---|---|
+| Paseo Altamira *(opened 2019)* | 97.4% | 87.3% | leases expiring faster than they re-let |
+| Plaza Bernal *(2021)* | 95.4% | 94.5% | steady |
+| Paseo San Isidro *(2022)* | 79.7% | 96.3% | still filling |
+
+The aggregate barely moves, which is exactly why the aggregate is the wrong
+number to manage by. Neither centre ever reaches 100% — one unit is always
+under fit-out or between tenants, and a dashboard showing 100% is lying.
 
 ---
 
 ## Measured, not asserted
 
-`python scripts/run_demo.py` runs the pipeline and checks 24 assertions. A few
+`python scripts/run_demo.py` runs the pipeline and checks 25 assertions. A few
 worth naming:
 
 | | |
 |---|---|
-| Current occupancy by area | **92.3%** |
-| …by unit count | 94.3% — *not the same number* |
-| Shared units (two tenants, one unit) | 7 |
+| Current occupancy by area | **91.3%** |
+| Vacate the largest anchor → occupancy by **area** falls | **5.0 pp** |
+| …and occupancy by **unit count** falls | 0.6 pp — *eight times less* |
+| Shared units (two tenants, one unit) | 3 |
 | State vs. sum of the ledger | max gap **0.000 m²** |
 | Units over their own area | 0 |
-| Median closed-lease duration | 1,161 days |
+| Median closed-lease duration | 1,221 days |
 
-**Occupancy is reported by square metres, not by unit count.** An empty anchor
-weighs what it weighs; counting it as "one of 157" hides the hole. Both numbers
-are shown, precisely so the gap is visible.
+**Occupancy is reported by square metres, not by unit count**, and that last
+pair is why. Empty the 1,311 m² anchor and the area figure moves five points
+while the unit count barely twitches — the unit count cannot see the hole. Both
+numbers are shown in the app, precisely so the gap is visible when it opens.
 
 The assertions that matter most are the ones about the ledger itself: entry
 numbers are gapless, no entry is dated before the one before it, every closed
@@ -194,11 +230,11 @@ matches the state the app displays — today and at any past cut-off.
 ```bash
 pip install -r requirements.txt
 
-python scripts/run_demo.py          # 24 assertions
+python scripts/run_demo.py          # 25 assertions
 streamlit run app/gestor.py         # the app
 
 pip install -r requirements-dev.txt
-pytest -q                           # 43 tests
+pytest -q                           # 50 tests
 ```
 
 **No credentials, no database, no environment variables.** The app generates its
@@ -214,6 +250,7 @@ src/ocupacion.py         state derived from the ledger
 src/plano.py             the floor plan, in Altair
 src/generar_historia.py  4½ years of synthetic movement
 app/gestor.py            Streamlit: plan · rent · release · history
+tests/test_graficas.py   every chart, compiled with the browser's Vega-Lite
 ```
 
 `src/libro.py` is the file to read first. Everything else derives from it.
