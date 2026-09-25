@@ -37,7 +37,8 @@ def preparar(est: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
-def dibujar(est: pd.DataFrame, titulo: str, altura: int = 420) -> alt.LayerChart:
+def dibujar(est: pd.DataFrame, titulo: str, altura: int = 420,
+            leyenda: bool = True) -> alt.LayerChart:
     """Devuelve el plano como una gráfica de tres capas."""
     d = preparar(est)
 
@@ -82,7 +83,9 @@ def dibujar(est: pd.DataFrame, titulo: str, altura: int = 420) -> alt.LayerChart
             title="Estado",
             scale=alt.Scale(domain=[ETIQUETA[e] for e in ORDEN],
                             range=[COLORES[e] for e in ORDEN]),
-            legend=alt.Legend(orient="top", direction="horizontal"),
+            legend=(alt.Legend(orient="top", direction="horizontal",
+                               symbolType="square", symbolSize=140)
+                    if leyenda else None),
         ),
     )
 

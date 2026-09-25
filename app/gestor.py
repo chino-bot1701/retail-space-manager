@@ -144,14 +144,16 @@ with tab_plano:
             "anclas: un local grande vacío pesa mucho más que uno chico, y "
             "contar locales lo esconde.")
 
-    for nivel in niveles_ordenados(est["nivel"].unique()):
+    # La leyenda va solo en el primer nivel: es la misma para los tres y
+    # repetirla tres veces ocupa el lugar del plano.
+    for i, nivel in enumerate(niveles_ordenados(est["nivel"].unique())):
         sub = est[est["nivel"] == nivel]
         st.altair_chart(
             plano.dibujar(
                 sub,
                 f"{nombre_plaza(codigo)} — {NIVELES_NOMBRE.get(nivel, nivel)}"
                 f" · {sub['m2_ocupados'].sum() / sub['m2_totales'].sum():.0%} ocupado",
-                altura=260),
+                altura=260, leyenda=i == 0),
             width="stretch")
 
     st.subheader("Detalle por local")
@@ -225,11 +227,15 @@ with tab_plano:
             .configure_view(strokeWidth=0),
             width="content")
 
+        # `familia` se omite: ya está dicha por el color y la leyenda. `giro`
+        # sí se muestra, porque es el detalle que la agrupación esconde.
         st.dataframe(
-            inq.rename(columns={
-                "cliente": "Cliente", "m2_ocupados": "m² ocupados",
-                "locales": "Locales", "n_locales": "Núm. locales",
-                "n_contratos": "Núm. contratos"}),
+            inq[["cliente", "giro", "m2_ocupados", "locales",
+                 "n_locales", "n_contratos"]].rename(columns={
+                     "cliente": "Cliente", "giro": "Giro",
+                     "m2_ocupados": "m² ocupados", "locales": "Locales",
+                     "n_locales": "Núm. locales",
+                     "n_contratos": "Núm. contratos"}),
             hide_index=True, width="stretch", height=280)
         st.caption(
             f"{len(inq)} inquilinos en {nombre_plaza(codigo)}. Para la ocupación "
